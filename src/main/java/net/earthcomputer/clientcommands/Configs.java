@@ -71,12 +71,52 @@ public class Configs {
     public static boolean toolBreakWarning = false;
 
     @Config(setter = @Config.Setter("setMaxEnchantItemThrows"))
-    private static int maxEnchantItemThrows = 64 * 32;
+    private static int maxEnchantItemThrows = 64 * 256;
     public static int getMaxEnchantItemThrows() {
         return maxEnchantItemThrows;
     }
     public static void setMaxEnchantItemThrows(int maxEnchantItemThrows) {
         Configs.maxEnchantItemThrows = Mth.clamp(maxEnchantItemThrows, 0, 1000000);
+    }
+
+    @Config(setter = @Config.Setter("setMinEnchantBookshelves"))
+    private static int minEnchantBookshelves = 0;
+    public static int getMinEnchantBookshelves() {
+        return minEnchantBookshelves;
+    }
+    public static void setMinEnchantBookshelves(int minEnchantBookshelves) {
+        Configs.minEnchantBookshelves = Mth.clamp(minEnchantBookshelves, 0, 15);
+        Configs.maxEnchantBookshelves = Math.max(Configs.maxEnchantBookshelves, Configs.minEnchantBookshelves);
+    }
+
+    @Config(setter = @Config.Setter("setMaxEnchantBookshelves"))
+    private static int maxEnchantBookshelves = 15;
+    public static int getMaxEnchantBookshelves() {
+        return maxEnchantBookshelves;
+    }
+    public static void setMaxEnchantBookshelves(int maxEnchantBookshelves) {
+        Configs.maxEnchantBookshelves = Mth.clamp(maxEnchantBookshelves, 0, 15);
+        Configs.minEnchantBookshelves = Math.min(Configs.minEnchantBookshelves, Configs.maxEnchantBookshelves);
+    }
+
+    @Config(setter = @Config.Setter("setMinEnchantLevels"))
+    private static int minEnchantLevels = 1;
+    public static int getMinEnchantLevels() {
+        return minEnchantLevels;
+    }
+    public static void setMinEnchantLevels(int minEnchantLevels) {
+        Configs.minEnchantLevels = Mth.clamp(minEnchantLevels, 1, 30);
+        Configs.maxEnchantLevels = Math.max(Configs.maxEnchantLevels, Configs.minEnchantLevels);
+    }
+
+    @Config(setter = @Config.Setter("setMaxEnchantLevels"))
+    private static int maxEnchantLevels = 30;
+    public static int getMaxEnchantLevels() {
+        return maxEnchantLevels;
+    }
+    public static void setMaxEnchantLevels(int maxEnchantLevels) {
+        Configs.maxEnchantLevels = Mth.clamp(maxEnchantLevels, 1, 30);
+        Configs.minEnchantLevels = Math.min(Configs.minEnchantLevels, Configs.maxEnchantLevels);
     }
 
     @Config(setter = @Config.Setter("setChorusManipulation"), temporary = true)
@@ -110,7 +150,21 @@ public class Configs {
     @Config
     public static boolean acceptC2CPackets = false;
 
+    @Config
+    public static float itemThrowsPerTick = 1;
+
     public static boolean conditionLessThan1_20() {
         return MultiVersionCompat.INSTANCE.getProtocolVersion() < MultiVersionCompat.V1_20;
     }
+
+    @Config
+    public static PacketDumpMethod packetDumpMethod = PacketDumpMethod.REFLECTION;
+
+    public enum PacketDumpMethod {
+        REFLECTION,
+        BYTE_BUF,
+    }
+
+    @Config
+    public static int maximumPacketFieldDepth = 10;
 }

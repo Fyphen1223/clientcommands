@@ -59,6 +59,7 @@
   "commands.cfind.success": "找到%d个匹配查找条件的实体",
 
   "commands.cfindblock.notFound": "未发现此方块",
+  "commands.cfindblock.starting": "正在搜索：%s",
   "commands.cfindblock.success.left": "离你最近的匹配方块在",
   "commands.cfindblock.success.glow": "[发光]",
   "commands.cfindblock.success.right": "，距离你%1$s格",
@@ -94,6 +95,11 @@
   "commands.cfunction.limitReached": "已达到命令限制（%d）",
   "commands.cfunction.success": "从函数%s中运行%d个命令",
 
+  "commands.cgamemode.playerNotFound": "未找到玩家",
+  "commands.cgamemode.playerGameMode": "玩家%s处于%s游戏模式",
+  "commands.cgamemode.noneWithGameMode": "没有玩家处于%s游戏模式",
+  "commands.cgamemode.listWithGameMode": "以下玩家处于%s游戏模式：",
+
   "commands.cgamma.success": "将伽马值设为%f",
 
   "commands.cghostblock.fill.success": "成功填充%d个幽灵方块",
@@ -106,6 +112,8 @@
   "commands.cglow.entity.failed": "没有目标实体可以发光",
   "commands.cglow.entity.success": "成功使%d个实体发光",
   "commands.cglow.area.success": "成功使%d个区域发光",
+
+  "commands.chat.success": "喜报：已经成功地打开了聊天窗口!!",
 
   "commands.chotbar.notCreative": "仅创造模式玩家可以恢复物品栏",
   "commands.chotbar.restoredHotbar": "成功恢复物品栏%d",
@@ -134,6 +142,19 @@
   "commands.ckit.list": "可用背包存档：%s",
   "commands.ckit.list.empty": "无可用背包存档",
 
+  "commands.clisten.commandDisabled": "此命令已被禁用，请查看日志",
+  "commands.clisten.unknownPacket": "未知数据包%s",
+  "commands.clisten.receivedPacket": "收到以下数据包：%s",
+  "commands.clisten.sentPacket": "发送了以下数据包：%s",
+  "commands.clisten.packetError": "错误",
+  "commands.clisten.add.success": "成功开始监听该数据包",
+  "commands.clisten.add.failed": "已经在监听该数据包",
+  "commands.clisten.remove.success": "不再监听该数据包",
+  "commands.clisten.remove.failed": "未监听该数据包",
+  "commands.clisten.list.none": "未监听任何数据包",
+  "commands.clisten.list": "正在监听以下数据包：",
+  "commands.clisten.clear": "不再监听任何数据包",
+
   "commands.cplayerinfo.ioException": "出现错误",
   "commands.cplayerinfo.getNameHistory.success": "%s有如下名称：%s",
 
@@ -143,6 +164,8 @@
   "commands.cpermissionlevel.success": "你的权限等级为%d",
 
   "commands.cplaysound.success": "成功播放音效%s给自己",
+
+  "commands.cplugins.found": "找到以下插件：",
 
   "commands.cping.success": "你的平均ping是%dms",
   "commands.cping.success.other": "%s的平均ping是%dms",
@@ -160,6 +183,8 @@
 
   "commands.crender.entities.success": "实体渲染规则已更新",
 
+  "commands.csignsearch.starting": "正在搜索告示牌",
+
   "commands.cstartup.add.success": "在启动文件中添加了命令",
   "commands.cstartup.couldNotCreateFile": "无法创建启动文件",
   "commands.cstartup.couldNotEdit": "无法编辑启动文件",
@@ -173,6 +198,8 @@
   "commands.ctask.list.success": "%d个任务正在执行",
   "commands.ctask.stop.noMatch": "没有匹配的任务",
   "commands.ctask.stop.success": "已停止%d个任务",
+
+  "commands.ctime.reset.success": "当前时间与服务器相同",
 
   "commands.ctitle.cleared": "已清除的标题",
   "commands.ctitle.reset": "重置标题选项",
@@ -218,6 +245,9 @@
   "commands.client.enable": "启用",
   "commands.client.expectedRegex": "无效的正则表达式%s",
   "commands.client.invalidArgumentException": "无效参数‘%s’",
+  "commands.client.invalidClickAction": "无效的点击事件操作‘%s’",
+  "commands.client.invalidHoverAction": "无效的点击事件操作‘%s’",
+  "commands.client.invalidHoverEvent": "无效的悬浮事件‘%s’",
   "commands.client.notClient": "不是客户端指令",
   "commands.client.requiresRestart": "此更改将在你重新启动客户端后生效",
   "commands.client.tooFewArguments": "参数过少",

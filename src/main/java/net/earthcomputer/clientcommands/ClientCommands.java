@@ -7,6 +7,7 @@ import com.mojang.logging.LogUtils;
 import dev.xpple.betterconfig.api.ModConfigBuilder;
 import io.netty.buffer.Unpooled;
 import net.earthcomputer.clientcommands.command.*;
+import net.earthcomputer.clientcommands.features.MappingsHelper;
 import net.earthcomputer.clientcommands.render.RenderQueue;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
@@ -85,6 +86,8 @@ public class ClientCommands implements ClientModInitializer {
         new ModConfigBuilder("clientcommands", Configs.class).build();
 
         ItemGroupCommand.registerItemGroups();
+
+        MappingsHelper.load();
     }
 
     private static Set<String> getCommands(CommandDispatcher<?> dispatcher) {
@@ -104,63 +107,68 @@ public class ClientCommands implements ClientModInitializer {
         }
     }
 
+    public static boolean isClientcommandsCommand(String commandName) {
+        return clientcommandsCommands.contains(commandName);
+    }
+
     public static void registerCommands(CommandDispatcher<FabricClientCommandSource> dispatcher, CommandBuildContext context) {
         Set<String> existingCommands = getCommands(dispatcher);
 
-        AuditMixinsCommand.register(dispatcher);
-        BookCommand.register(dispatcher);
-        LookCommand.register(dispatcher);
-        NoteCommand.register(dispatcher);
-        ShrugCommand.register(dispatcher);
-        FindCommand.register(dispatcher);
-        FindBlockCommand.register(dispatcher, context);
-        FindItemCommand.register(dispatcher, context);
-        TaskCommand.register(dispatcher);
-        CalcCommand.register(dispatcher);
-        RenderCommand.register(dispatcher);
-        UsageTreeCommand.register(dispatcher);
-        WikiCommand.register(dispatcher);
-        CEnchantCommand.register(dispatcher);
-        GlowCommand.register(dispatcher);
-        GetDataCommand.register(dispatcher);
-        CalcStackCommand.register(dispatcher, context);
-        GammaCommand.register(dispatcher);
-        MoteCommand.register(dispatcher);
-        ChorusCommand.register(dispatcher);
-        FishCommand.register(dispatcher, context);
-        SignSearchCommand.register(dispatcher);
-        GhostBlockCommand.register(dispatcher, context);
-        RelogCommand.register(dispatcher);
-        CGiveCommand.register(dispatcher, context);
-        CPlaySoundCommand.register(dispatcher);
-        CStopSoundCommand.register(dispatcher);
-        FovCommand.register(dispatcher);
-        HotbarCommand.register(dispatcher);
-        KitCommand.register(dispatcher);
-        ItemGroupCommand.register(dispatcher, context);
-        CParticleCommand.register(dispatcher);
-        PermissionLevelCommand.register(dispatcher);
-        CTellRawCommand.register(dispatcher);
-        CTimeCommand.register(dispatcher);
         AliasCommand.register(dispatcher);
         AreaStatsCommand.register(dispatcher, context);
+        AuditMixinsCommand.register(dispatcher);
+        BookCommand.register(dispatcher);
+        CalcCommand.register(dispatcher);
+        CalcStackCommand.register(dispatcher, context);
+        CEnchantCommand.register(dispatcher);
+        CFunctionCommand.register(dispatcher);
+        CGameModeCommand.register(dispatcher);
+        CGiveCommand.register(dispatcher, context);
+        ChorusCommand.register(dispatcher);
+        CParticleCommand.register(dispatcher);
+        CPlaySoundCommand.register(dispatcher);
+        CrackRNGCommand.register(dispatcher);
+        CStopSoundCommand.register(dispatcher);
         CTeleportCommand.register(dispatcher);
-        // PlayerInfoCommand.register(dispatcher);
-        PingCommand.register(dispatcher);
-        UuidCommand.register(dispatcher);
-        SnakeCommand.register(dispatcher);
+        CTellRawCommand.register(dispatcher);
+        CTimeCommand.register(dispatcher);
         CTitleCommand.register(dispatcher);
+        FindBlockCommand.register(dispatcher, context);
+        FindCommand.register(dispatcher);
+        FindItemCommand.register(dispatcher, context);
+        FishCommand.register(dispatcher, context);
+        FovCommand.register(dispatcher);
+        GammaCommand.register(dispatcher);
+        GetDataCommand.register(dispatcher);
+        GhostBlockCommand.register(dispatcher, context);
+        GlowCommand.register(dispatcher);
+        HotbarCommand.register(dispatcher);
+        ItemGroupCommand.register(dispatcher, context);
+        KitCommand.register(dispatcher);
+        ListenCommand.register(dispatcher);
+        LookCommand.register(dispatcher);
+        MoteCommand.register(dispatcher);
+        NoteCommand.register(dispatcher);
+        PermissionLevelCommand.register(dispatcher);
+        PingCommand.register(dispatcher);
+        // PlayerInfoCommand.register(dispatcher);
+        PluginsCommand.register(dispatcher);
+        PosCommand.register(dispatcher);
+        RelogCommand.register(dispatcher);
+        RenderCommand.register(dispatcher);
+        ShrugCommand.register(dispatcher);
+        SignSearchCommand.register(dispatcher);
+        SnakeCommand.register(dispatcher);
+        StartupCommand.register(dispatcher);
+        TaskCommand.register(dispatcher);
         TooltipCommand.register(dispatcher, context);
         TranslateCommand.register(dispatcher);
+        UsageTreeCommand.register(dispatcher);
+        UuidCommand.register(dispatcher);
         VarCommand.register(dispatcher);
-        CFunctionCommand.register(dispatcher);
-        StartupCommand.register(dispatcher);
-        WhisperEncryptedCommand.register(dispatcher);
-        PosCommand.register(dispatcher);
-        CrackRNGCommand.register(dispatcher);
         WeatherCommand.register(dispatcher);
-        PluginsCommand.register(dispatcher);
-        CGameModeCommand.register(dispatcher);
+        WhisperEncryptedCommand.register(dispatcher);
+        WikiCommand.register(dispatcher);
 
         Calendar calendar = Calendar.getInstance();
         boolean registerChatCommand = calendar.get(Calendar.MONTH) == Calendar.APRIL && calendar.get(Calendar.DAY_OF_MONTH) == 1;

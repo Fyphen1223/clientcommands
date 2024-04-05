@@ -1,8 +1,12 @@
 package net.earthcomputer.clientcommands.features;
 
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.mojang.logging.LogUtils;
+import com.seedfinding.mcseed.lcg.LCG;
+import com.seedfinding.mcseed.rand.Rand;
 import net.earthcomputer.clientcommands.Configs;
 import net.earthcomputer.clientcommands.MultiVersionCompat;
+import net.earthcomputer.clientcommands.task.ItemThrowTask;
 import net.earthcomputer.clientcommands.task.LongTask;
 import net.earthcomputer.clientcommands.task.LongTaskList;
 import net.earthcomputer.clientcommands.task.OneTickTask;
@@ -23,7 +27,6 @@ import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.inventory.EnchantmentMenu;
-import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -33,6 +36,7 @@ import net.minecraft.world.item.enchantment.EnchantmentInstance;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.EnchantmentTableBlock;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
 import java.util.ArrayList;
@@ -41,6 +45,10 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.function.Consumer;
 import java.util.function.Predicate;
 
 public class EnchantmentCracker {
@@ -311,140 +319,196 @@ public class EnchantmentCracker {
      * seed
      */
 
-    public static ManipulateResult manipulateEnchantments(Item item, Predicate<List<EnchantmentInstance>> enchantmentsPredicate, boolean simulate) {
+    public static String manipulateEnchantments(Item item, Predicate<List<EnchantmentInstance>> enchantmentsPredicate, boolean simulate, Consumer<@Nullable ManipulateResult> callback) {
         LocalPlayer player = Minecraft.getInstance().player;
         assert player != null;
 
+        ExecutorService threadPool = Executors.newFixedThreadPool(
+            Math.max(1, Runtime.getRuntime().availableProcessors() - (Minecraft.getInstance().hasSingleplayerServer() ? 2 : 1)),
+            new ThreadFactoryBuilder().setNameFormat("Enchantment Cracker #%d").build()
+        );
+
+        int noDummyXpSeed = Configs.enchCrackState == CrackState.CRACKED ? possibleXPSeeds.iterator().next() : 0;
+
         ItemStack stack = new ItemStack(item);
-        long seed = PlayerRandCracker.getSeed();
-        // -2: not found; -1: no dummy enchantment needed; >= 0: number of times needed
-        // to throw out item before dummy enchantment
-        int timesNeeded = -2;
-        int bookshelvesNeeded = 0;
-        int slot = 0;
-        List<EnchantmentInstance> enchantments = null;
-        int[] enchantLevels = new int[3];
-        outerLoop:
-        for (int i = Configs.enchCrackState == CrackState.CRACKED ? -1 : 0;
+        long playerSeed = PlayerRandCracker.getSeed();
+
+        List<CompletableFuture<@Nullable ManipulateResult>> futures = new ArrayList<>();
+
+        for (int i = Configs.enchCrackState == CrackState.CRACKED ? ManipulateResult.NO_DUMMY : 0;
              i < (Configs.playerCrackState.knowsSeed() ? Configs.getMaxEnchantItemThrows() : 0);
-             i++) {
-            int xpSeed = i == -1 ?
-                    possibleXPSeeds.iterator().next()
-                    : (int) (((seed * PlayerRandCracker.MULTIPLIER + PlayerRandCracker.ADDEND) & PlayerRandCracker.MASK) >>> 16);
-            RandomSource rand = RandomSource.create();
-            for (bookshelvesNeeded = 0; bookshelvesNeeded <= 15; bookshelvesNeeded++) {
-                rand.setSeed(xpSeed);
-                for (slot = 0; slot < 3; slot++) {
-                    int level = EnchantmentHelper.getEnchantmentCost(rand, slot, bookshelvesNeeded, stack);
-                    if (level < slot + 1) {
-                        level = 0;
-                    }
-                    enchantLevels[slot] = level;
-                }
-                for (slot = 0; slot < 3; slot++) {
-                    enchantments = getEnchantmentList(rand, xpSeed, stack, slot,
-                            enchantLevels[slot]);
-                    if (enchantmentsPredicate.test(enchantments)) {
-                        timesNeeded = i;
-                        break outerLoop;
-                    }
-                }
-            }
+             i++
+        ) {
+            int times = i;
+            futures.add(CompletableFuture.supplyAsync(() -> {
+                try {
+                    Rand playerRand = new Rand(LCG.JAVA, playerSeed);
+                    playerRand.advance(Math.max(times, 0) * 4L);
+                    int xpSeed = times == ManipulateResult.NO_DUMMY ?
+                        noDummyXpSeed
+                        : (int) playerRand.nextBits(32);
 
-            if (i != -1) {
-                for (int j = 0; j < 4; j++) {
-                    seed = (seed * PlayerRandCracker.MULTIPLIER + PlayerRandCracker.ADDEND) & PlayerRandCracker.MASK;
-                }
-            }
-        }
-        if (timesNeeded == -2) {
-            return null;
-        }
-
-        if (simulate) {
-            return new ManipulateResult(timesNeeded, bookshelvesNeeded, slot, enchantments);
-        }
-
-        LongTaskList taskList = new LongTaskList();
-        if (timesNeeded != -1) {
-            if (timesNeeded != 0) {
-                player.moveTo(player.getX(), player.getY(), player.getZ(), player.getYRot(), 90);
-                // sync rotation to server before we throw any items
-                player.connection.send(new ServerboundMovePlayerPacket.Rot(player.getYRot(), 90, player.onGround()));
-                Configs.playerCrackState = PlayerRandCracker.CrackState.MANIPULATING_ENCHANTMENTS;
-            }
-            for (int i = 0; i < timesNeeded; i++) {
-                // throw the item once it's in the inventory
-                taskList.addTask(new SimpleTask() {
-                    @Override
-                    public boolean condition() {
-                        if (Configs.playerCrackState != PlayerRandCracker.CrackState.MANIPULATING_ENCHANTMENTS) {
-                            taskList._break();
-                            return false;
+                    int[] enchantLevels = new int[3];
+                    RandomSource rand = RandomSource.create();
+                    for (int bookshelvesNeeded = Configs.getMinEnchantBookshelves(); bookshelvesNeeded <= Configs.getMaxEnchantBookshelves(); bookshelvesNeeded++) {
+                        rand.setSeed(xpSeed);
+                        for (int slot = 0; slot < 3; slot++) {
+                            int level = EnchantmentHelper.getEnchantmentCost(rand, slot, bookshelvesNeeded, stack);
+                            if (level < slot + 1) {
+                                level = 0;
+                            }
+                            enchantLevels[slot] = level;
                         }
-
-                        Slot slot = PlayerRandCracker.getBestItemThrowSlot(Minecraft.getInstance().player.containerMenu.slots);
-                        //noinspection RedundantIfStatement
-                        if (slot == null) {
-                            return true; // keep waiting
-                        } else {
-                            return false; // ready to throw an item
+                        for (int slot = 0; slot < 3; slot++) {
+                            List<EnchantmentInstance> enchantments = getEnchantmentList(rand, xpSeed, stack, slot,
+                                enchantLevels[slot]);
+                            if (enchantmentsPredicate.test(enchantments)
+                                && enchantLevels[slot] >= Configs.getMinEnchantLevels()
+                                && enchantLevels[slot] <= Configs.getMaxEnchantLevels()
+                            ) {
+                                return new ManipulateResult(times, bookshelvesNeeded, slot, enchantments);
+                            }
                         }
                     }
-
-                    @Override
-                    protected void onTick() {
-                    }
-
-                    @Override
-                    public void onCompleted() {
-                        PlayerRandCracker.throwItem();
-                        scheduleDelay();
-                    }
-                });
-            }
-            // dummy enchantment
-            taskList.addTask(new LongTask() {
-                @Override
-                public void initialize() {
-                    Configs.playerCrackState = PlayerRandCracker.CrackState.WAITING_DUMMY_ENCHANT;
-                    Minecraft.getInstance().gui.getChat().addMessage(Component.translatable("enchCrack.insn.dummy"));
-                    doneEnchantment = false;
+                } catch (Throwable e) {
+                    LOGGER.error("An error occurred simulating enchantments", e);
                 }
 
-                @Override
-                public boolean condition() {
-                    return Configs.playerCrackState == PlayerRandCracker.CrackState.WAITING_DUMMY_ENCHANT;
-                }
-
-                @Override
-                public void increment() {
-                }
-
-                @Override
-                public void body() {
-                    scheduleDelay();
-                }
-            });
+                return null;
+            }, threadPool));
         }
-        final int bookshelvesNeeded_f = bookshelvesNeeded;
-        final int slot_f = slot;
-        doneEnchantment = true;
-        taskList.addTask(new OneTickTask() {
+
+        LongTaskList taskList = new LongTaskList() {
             @Override
-            public void run() {
-                if (Configs.enchCrackState == CrackState.CRACKED && doneEnchantment) {
-                    ChatComponent chat = Minecraft.getInstance().gui.getChat();
-                    chat.addMessage(Component.translatable("enchCrack.insn.ready").withStyle(ChatFormatting.BOLD));
-                    chat.addMessage(Component.translatable("enchCrack.insn.bookshelves", bookshelvesNeeded_f));
-                    chat.addMessage(Component.translatable("enchCrack.insn.slot", slot_f + 1));
+            public Set<Object> getMutexKeys() {
+                return simulate ? Set.of() : Set.of(ItemThrowTask.class);
+            }
+        };
+
+        taskList.addTask(new SimpleTask() {
+            private int index = 0;
+            ManipulateResult finalResult = null;
+            private boolean hasShutDown = false;
+
+            @Override
+            protected void onTick() {
+                while (index < futures.size()) {
+                    var future = futures.get(index);
+                    if (!future.isDone()) {
+                        break;
+                    }
+                    ManipulateResult result = future.join();
+                    if (result != null) {
+                        finalResult = result;
+                        _break();
+                        return;
+                    }
+
+                    index++;
                 }
+            }
+
+            @Override
+            public boolean condition() {
+                return index < futures.size();
+            }
+
+            @Override
+            public boolean stopOnLevelUnload(boolean isDisconnect) {
+                if (!hasShutDown) {
+                    threadPool.shutdownNow();
+                    hasShutDown = true;
+                }
+                return true;
+            }
+
+            @Override
+            public void onCompleted() {
+                if (!hasShutDown) {
+                    threadPool.shutdownNow();
+                    hasShutDown = true;
+                }
+
+                if (!simulate && finalResult != null) {
+                    int timesNeeded = finalResult.itemThrows();
+                    if (timesNeeded != ManipulateResult.NO_DUMMY) {
+                        if (timesNeeded != 0) {
+                            player.moveTo(player.getX(), player.getY(), player.getZ(), player.getYRot(), 90);
+                            // sync rotation to server before we throw any items
+                            player.connection.send(new ServerboundMovePlayerPacket.Rot(player.getYRot(), 90, player.onGround()));
+                            Configs.playerCrackState = PlayerRandCracker.CrackState.MANIPULATING_ENCHANTMENTS;
+                        }
+                        if (timesNeeded > 0) {
+                            taskList.addTask(new ItemThrowTask(timesNeeded, ItemThrowTask.FLAG_WAIT_FOR_ITEMS) {
+                                @Override
+                                public boolean condition() {
+                                    if (Configs.playerCrackState != PlayerRandCracker.CrackState.MANIPULATING_ENCHANTMENTS) {
+                                        taskList._break();
+                                        return false;
+                                    }
+                                    return super.condition();
+                                }
+                            });
+                        }
+                        // dummy enchantment
+                        taskList.addTask(new LongTask() {
+                            @Override
+                            public void initialize() {
+                                Configs.playerCrackState = PlayerRandCracker.CrackState.WAITING_DUMMY_ENCHANT;
+                                Minecraft.getInstance().gui.getChat().addMessage(Component.translatable("enchCrack.insn.dummy"));
+                                doneEnchantment = false;
+                            }
+
+                            @Override
+                            public boolean condition() {
+                                return Configs.playerCrackState == PlayerRandCracker.CrackState.WAITING_DUMMY_ENCHANT;
+                            }
+
+                            @Override
+                            public void increment() {
+                            }
+
+                            @Override
+                            public void body() {
+                                scheduleDelay();
+                            }
+
+                            @Override
+                            public String toString() {
+                                return "Enchantment Cracker Wait Dummy";
+                            }
+                        });
+                    }
+
+                    doneEnchantment = true;
+                    taskList.addTask(new OneTickTask() {
+                        @Override
+                        public void run() {
+                            if (Configs.enchCrackState == CrackState.CRACKED && doneEnchantment) {
+                                ChatComponent chat = Minecraft.getInstance().gui.getChat();
+                                chat.addMessage(Component.translatable("enchCrack.insn.ready").withStyle(ChatFormatting.BOLD));
+                                chat.addMessage(Component.translatable("enchCrack.insn.bookshelves", finalResult.bookshelves));
+                                chat.addMessage(Component.translatable("enchCrack.insn.slot", finalResult.slot + 1));
+                            }
+                        }
+
+                        @Override
+                        public String toString() {
+                            return "Enchantment Cracker Done Message";
+                        }
+                    });
+                }
+
+                callback.accept(finalResult);
+            }
+
+            @Override
+            public String toString() {
+                return "Enchantment Cracker Worker Poller";
             }
         });
 
-        TaskManager.addTask("enchantmentCracker", taskList);
-
-        return new ManipulateResult(timesNeeded, bookshelvesNeeded, slot, enchantments);
+        return TaskManager.addTask("enchantmentCracker", taskList);
     }
 
     // MISCELLANEOUS HELPER METHODS & ENCHANTING SIMULATION
@@ -524,7 +588,9 @@ public class EnchantmentCracker {
         }
     }
 
-    public record ManipulateResult(int itemThrows, int bookshelves, int slot, List<EnchantmentInstance> enchantments) {}
+    public record ManipulateResult(int itemThrows, int bookshelves, int slot, List<EnchantmentInstance> enchantments) {
+        public static final int NO_DUMMY = -1;
+    }
 
     public enum CrackState implements StringRepresentable {
         UNCRACKED("uncracked"), CRACKED("cracked"), CRACKING("cracking");

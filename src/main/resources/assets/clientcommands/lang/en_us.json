@@ -49,7 +49,7 @@
   "commands.cenchant.help.uncrackedPlayerSeed": "Help: you have not fully cracked the player seed",
   "commands.cenchant.incompatible": "Incompatible enchantments",
   "commands.cenchant.needEnchantingPrediction": "This command requires enchanting prediction to be enabled",
-  "commands.cenchant.success": "Starting enchantment manipulation",
+  "commands.cenchant.success": "Starting enchantment manipulation.",
   "commands.cenchant.uncracked": "Seed needs to be cracked",
 
   "commands.cfind.found.left": "Found %1$s at ",
@@ -141,6 +141,19 @@
   "commands.ckit.edit.success": "Successfully edited kit \"%s\"",
   "commands.ckit.list": "Available kits: %s",
   "commands.ckit.list.empty": "No available kits",
+
+  "commands.clisten.commandDisabled": "The command was disabled, check your logs",
+  "commands.clisten.unknownPacket": "Unknown packet %s",
+  "commands.clisten.receivedPacket": "Received the following packet: %s",
+  "commands.clisten.sentPacket": "Sent the following packet: %s",
+  "commands.clisten.packetError": "ERROR",
+  "commands.clisten.add.success": "Successfully started listening to that packet",
+  "commands.clisten.add.failed": "Already listening to that packet",
+  "commands.clisten.remove.success": "No longer listening to that packet",
+  "commands.clisten.remove.failed": "Not listening to that packet",
+  "commands.clisten.list.none": "Not listening to any packets",
+  "commands.clisten.list": "Listening to the following packets:",
+  "commands.clisten.clear": "No longer listening to any packets",
 
   "commands.cplayerinfo.ioException": "An error occurred",
   "commands.cplayerinfo.getNameHistory.success": "%s has had the following names: %s",
